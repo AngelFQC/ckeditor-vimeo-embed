@@ -20,4 +20,6 @@ CKEDITOR.plugins.setLang('ckeditor_vimeo_embed', 'en', {
     privacyViewUsers: 'Only Vimeo members can access the video',
     privacyEmbedWhitelistList: 'Whitelist (indicate domain)',
     alertStillUploading: 'Current video file is uploading...',
+    uploadEnd: 'Video uploaded ✔',
+    uploadProcess: 'Uploading video, please wait…',
 });

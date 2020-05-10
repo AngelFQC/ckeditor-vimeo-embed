@@ -9,7 +9,7 @@
                 xhr.open( 'POST', url, true );
                 xhr.onreadystatechange = function() {
                     if ( xhr.readyState == 4 ) {
-                        callback();
+                        callback(xhr.response);
                         xhr = null;
                     }
                 };
@@ -18,8 +18,27 @@
                 return xhr;
             }
 
-            var stillUploading = false;
+            function setUploadStatus(status) {
+                var elStatus = document.getElementById('ve-upload-status');
+
+                if ('process' === status) {
+                    elStatus.textContent = lang.uploadProcess;
+
+                    return;
+                }
+
+                if ('end' === status) {
+                    elStatus.textContent = lang.uploadEnd;
+
+                    return;
+                }
+
+                elStatus.textContent = '';
+            }
+
             var xhrPost = null;
+            var stillUploading = false;
+            var embedHtml = '';
 
             return {
                 title: 'Vimeo Embed',
@@ -62,18 +81,16 @@
                                                 id: 'privacy-embed',
                                                 label: lang.privacyEmbed,
                                                 items: [
-                                                    [lang.privacyEmbedPrivate, 'private'],
+                                                    // [lang.privacyEmbedPrivate, 'private'],
                                                     [lang.privacyEmbedPublic, 'public'],
                                                     [lang.privacyEmbedWhitelist, 'whitelist'],
                                                 ],
-                                                'default': 'private'
+                                                'default': 'public'
                                             },
                                             {
                                                 type: 'text',
                                                 id: 'privacy-embed-whitelist',
-                                                label: lang.privacyEmbedWhitelistList,
-                                                validate: function () {
-                                                }
+                                                label: lang.privacyEmbedWhitelistList
                                             },
                                         ]
                                     },
@@ -95,79 +112,123 @@
                                 ]
                             },
                             {
-                                type: 'button',
-                                id: 'submit',
-                                label: lang.uploadFile,
-                                title: lang.uploadFile,
-                                onClick: function () {
-                                    var dialog = this.getDialog();
+                                type: 'hbox',
+                                widths: ['1%', '100%'],
+                                children: [
+                                    {
+                                        type: 'button',
+                                        id: 'submit',
+                                        label: lang.uploadFile,
+                                        title: lang.uploadFile,
+                                        onClick: function () {
+                                            var dialog = this.getDialog();
 
-                                    var title = dialog.getValueOf('ve-basic', 'title').trim();
-                                    var description = dialog.getValueOf('ve-basic', 'description').trim();
-                                    var privacyDownload = dialog.getValueOf('ve-basic', 'privacy-download');
-                                    var privacyEmbed = dialog.getValueOf('ve-basic', 'privacy-embed');
-                                    var privacyEmbedWhiteList = dialog.getValueOf('ve-basic', 'privacy-embed-whitelist').trim();
-                                    var privacyView = dialog.getValueOf('ve-basic', 'privacy-view');
-                                    var files = document.getElementById('ve-file').files;
+                                            var title = dialog.getValueOf('ve-basic', 'title').trim();
+                                            var description = dialog.getValueOf('ve-basic', 'description').trim();
+                                            var privacyDownload = dialog.getValueOf('ve-basic', 'privacy-download');
+                                            var privacyEmbed = dialog.getValueOf('ve-basic', 'privacy-embed');
+                                            var privacyEmbedWhiteList = dialog.getValueOf('ve-basic', 'privacy-embed-whitelist').trim();
+                                            var privacyView = dialog.getValueOf('ve-basic', 'privacy-view');
+                                            var files = document.getElementById('ve-file').files;
 
-                                    if ((!title || !title.length) ||
-                                        //(!description || !description.length) ||
-                                        (!files || files.length !== 1)
-                                    ) {
-                                        return;
-                                    }
+                                            if (xhrPost) {
+                                                return;
+                                            }
 
-                                    stillUploading = true;
+                                            if (!title || !title.length) {
+                                                dialog.getContentElement('ve-basic', 'title').focus();
 
-                                    var formData = new FormData();
-                                    formData.append('title', title);
-                                    formData.append('description', description);
-                                    formData.append('ve_file', files[0], files[0].name);
-                                    formData.append('privacy_download', privacyDownload);
-                                    formData.append('privacy_embed', privacyEmbed);
-                                    formData.append('privacy_embed_whitelist', privacyEmbedWhiteList);
-                                    formData.append('privacy_view', privacyView);
+                                                return;
+                                            }
 
-                                    xhrPost = post(
-                                        CKEDITOR.plugins.getPath('ckeditor_vimeo_embed') + 'integration/upload.php',
-                                        formData,
-                                        function () {
-                                            stillUploading = false;
+                                            if (!files || files.length !== 1) {
+                                                document.getElementById('ve-file').focus();
+
+                                                return;
+                                            }
+
+                                            if (privacyEmbed === 'whitelist' && !privacyEmbedWhiteList.length) {
+                                                dialog.getContentElement('ve-basic', 'privacy-embed-whitelist').focus();
+
+                                                return;
+                                            }
+
+                                            stillUploading = true;
+                                            embedHtml = '';
+
+                                            setUploadStatus('process');
+
+                                            var formData = new FormData();
+                                            formData.append('title', title);
+                                            formData.append('description', description);
+                                            formData.append('ve_file', files[0], files[0].name);
+                                            formData.append('privacy_download', privacyDownload);
+                                            formData.append('privacy_embed', privacyEmbed);
+                                            formData.append('privacy_embed_whitelist', privacyEmbedWhiteList);
+                                            formData.append('privacy_view', privacyView);
+
+                                            xhrPost = post(
+                                                CKEDITOR.plugins.getPath('ckeditor_vimeo_embed') + 'integration/upload.php',
+                                                formData,
+                                                function (response) {
+                                                    if (!response) {
+                                                        return;
+                                                    }
+
+                                                    stillUploading = false;
+
+                                                    var json = JSON.parse(response);
+
+                                                    if (json.error) {
+                                                        alert(json.message);
+                                                        setUploadStatus('');
+                                                    } else {
+                                                        embedHtml = json.embed;
+
+                                                        setUploadStatus('end');
+
+                                                        dialog.disableButton('cancel');
+                                                    }
+                                                }
+                                            );
                                         }
-                                    );
-                                }
-                            }
+                                    },
+                                    {
+                                        type: 'html',
+                                        html: '<span id="ve-upload-status" style="font-weight: bold;font-size: 14px;line-height: 28px;vertical-align: middle;height: 28px;display: table-cell;"></span>'
+                                    }
+                                ]
+                            },
                         ]
                     },
                 ],
+                onShow: function () {
+                    xhrPost = null;
+                    stillUploading = false;
+                    embedHtml = '';
+
+                    setUploadStatus('');
+
+                    document.getElementById('ve-file').value = null;
+
+                    this.enableButton('cancel');
+                },
                 onOk: function () {
                     if (stillUploading) {
                         alert(lang.alertStillUploading);
 
                         return false;
-
                     }
 
-                    if (xhrPost) {
-                        var json = JSON.parse(xhrPost.response);
-
-                        if (json.error) {
-                            alert(json.message);
-                        } else {
-                            editor.insertHtml(json.embed);
-                        }
+                    if (embedHtml) {
+                        editor.insertHtml(embedHtml);
                     }
-
-                    xhrPost = null;
-
-                    document.getElementById('ve-file').value = null;
                 },
-                onCancel: function () {
-                    if (xhrPost) {
+                onCancel: function (evt) {
+                    if (evt.data.hide && xhrPost) {
                         xhrPost.abort();
+                        xhrPost = null;
                     }
-
-                    document.getElementById('ve-file').value = null;
                 }
             };
         }
