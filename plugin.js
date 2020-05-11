@@ -1,6 +1,6 @@
 (function () {
     CKEDITOR.plugins.add('ckeditor_vimeo_embed', {
-        lang: ['en'],
+        lang: ['en', 'es'],
         icons: 'VimeoEmbed',
         init: function (editor) {
             editor.addCommand(
