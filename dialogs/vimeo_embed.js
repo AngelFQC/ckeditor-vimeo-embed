@@ -173,6 +173,8 @@
                                                 CKEDITOR.plugins.getPath('ckeditor_vimeo_embed') + 'integration/upload.php',
                                                 formData,
                                                 function (response) {
+                                                    xhrPost = null;
+
                                                     if (!response) {
                                                         return;
                                                     }
