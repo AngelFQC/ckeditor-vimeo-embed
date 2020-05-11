@@ -1,3 +1,5 @@
+/* For licensing terms, see /LICENSE */
+
 (function () {
     CKEDITOR.plugins.add('ckeditor_vimeo_embed', {
         lang: ['en', 'es'],

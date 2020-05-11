@@ -1,3 +1,5 @@
+/* For licensing terms, see /LICENSE */
+
 (function () {
     CKEDITOR.dialog.add(
         'vimeoEmbedDialog',

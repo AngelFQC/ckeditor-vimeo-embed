@@ -1,3 +1,5 @@
+/* For licensing terms, see /LICENSE */
+
 CKEDITOR.plugins.setLang('ckeditor_vimeo_embed', 'en', {
     upload: 'Upload',
     privacy: 'Privacy',
